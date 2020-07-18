@@ -65,11 +65,14 @@ with open('population.csv') as csvfile:
         places[row[0]] = Place(row[0], row[1], float(row[2].replace(',','')))
 
 jan1 = datetime.date(2020, 1, 1)
+newest = jan1
 with closing(requests.get(url, stream=True)) as r:
     reader = csv.reader(codecs.iterdecode(r.iter_lines(), 'utf-8'))
     next(reader) # skip header
     for row in reader:
         row_date = datetime.datetime.strptime(row[3], '%Y-%m-%d').date()
+        if row_date > newest:
+            newest = row_date
         if row[1] in places:
             places[row[1]].addCases((row_date-jan1).days, int(row[4]))
         else:
@@ -77,14 +80,23 @@ with closing(requests.get(url, stream=True)) as r:
 
 myPlaces = [ 'E92000001' ]
 
-today=(datetime.date.today() - jan1).days
+print('Reference date: ' + str(newest))
+today=(newest - jan1).days
 for code in myPlaces:
     place = places[code]
-    print(place.format(today - 1))
+    print(place.format(today))
 
 england = places['E92000001']
-threshold = england.rateOverInterval(today - 1, 7) * 4
+threshold = england.rateOverInterval(today, 7) * 4
 
 for place in places:
-    if (places[place].rateOverInterval(today-1, 7) > threshold):
-        print(places[place].format(today - 1))
+    if (places[place].rateOverInterval(today, 7) > threshold):
+        print(places[place].format(today))
+
+with open('places.csv', mode='w') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow([ 'Code', 'Name', 'Population', '1/1/2020' ])
+    for place in places:
+        data = [ places[place].code, places[place].name, places[place].population ]
+        data.extend(places[place].cases)
+        writer.writerow(data)
