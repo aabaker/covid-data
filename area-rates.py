@@ -78,20 +78,29 @@ with closing(requests.get(url, stream=True)) as r:
         else:
             print('Unknown place' + row[1] + ' (' + row[0] + ')')
 
-myPlaces = [ 'E92000001' ]
 
-print('Reference date: ' + str(newest))
-today=(newest - jan1).days
-for code in myPlaces:
-    place = places[code]
-    print(place.format(today))
-
+refday=(newest - jan1).days
 england = places['E92000001']
-threshold = england.rateOverInterval(today, 7) * 4
+
+while england.cases[refday-1] > (england.cases[refday] * 4):
+    refday = refday - 1
+print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = refday)))
+refday = refday + 1
+
+with open ('myplaces.txt') as myplaces:
+    placeList = myplaces.readlines()
+    for code in placeList:
+        try:
+            place = places[code.strip()]
+            print(place.format(refday))
+        except:
+            print('Unrecognised place code: ' + code)
+
+threshold = england.rateOverInterval(refday, 7) * 3
 
 for place in places:
-    if (places[place].rateOverInterval(today, 7) > threshold):
-        print(places[place].format(today))
+    if (places[place].rateOverInterval(refday, 7) > threshold):
+        print(places[place].format(refday))
 
 with open('places.csv', mode='w') as csvfile:
     writer = csv.writer(csvfile)
