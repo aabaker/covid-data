@@ -87,6 +87,7 @@ while england.cases[refday-1] > (england.cases[refday] * 4):
 print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = refday)))
 refday = refday + 1
 
+print('Rates in defined places')
 with open ('myplaces.txt') as myplaces:
     placeList = myplaces.readlines()
     for code in placeList:
@@ -96,11 +97,13 @@ with open ('myplaces.txt') as myplaces:
         except:
             print('Unrecognised place code: ' + code)
 
-threshold = england.rateOverInterval(refday, 7) * 3
 
-for place in places:
-    if (places[place].rateOverInterval(refday, 7) > threshold):
-        print(places[place].format(refday))
+print('')
+print('15 highest rates over the past week')
+sortedPlaces = sorted(places, key=lambda place: places[place].rateOverInterval(refday,7), reverse=True)
+
+for place in sortedPlaces[:15]:
+    print(places[place].format(refday))
 
 with open('places.csv', mode='w') as csvfile:
     writer = csv.writer(csvfile)
