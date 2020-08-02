@@ -94,7 +94,7 @@ with open ('myplaces.txt') as myplaces:
         try:
             place = places[code.strip()]
             print(place.format(refday))
-        except:
+        except KeyError:
             print('Unrecognised place code: ' + code)
 
 
@@ -105,10 +105,39 @@ sortedPlaces = sorted(places, key=lambda place: places[place].rateOverInterval(r
 for place in sortedPlaces[:15]:
     print(places[place].format(refday))
 
-with open('places.csv', mode='w') as csvfile:
+header = [ 'Code', 'Name', 'Population' ]
+for day in range(0, refday):
+    header.append(jan1+datetime.timedelta(days = day))
+with open('places-raw.csv', mode='w') as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow([ 'Code', 'Name', 'Population', '1/1/2020' ])
+    writer.writerow(header)
     for place in places:
         data = [ places[place].code, places[place].name, places[place].population ]
         data.extend(places[place].cases)
         writer.writerow(data)
+
+placeTypes = {
+        'E06' : 'UTLA',
+        'E07' : 'LTLA',
+        'E08' : 'Borough',
+        'E09' : 'London Borough',
+        'E10' : 'County',
+        'E12' : 'Region',
+        'E92': 'Nation'
+        } 
+header = [ 'Code', 'Name', 'Population', 'Type' ]
+for day in range(6, refday):
+    header.append(jan1+datetime.timedelta(days = day))
+with open('places-7day.csv', mode='w') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(header)
+    for place in places:
+        try:
+            ptype = placeTypes[places[place].code[0:3]]
+        except KeyError:
+            ptype = 'Unknown'
+        data = [ places[place].code, places[place].name, places[place].population, ptype ]
+        for day in range(7, refday + 1):
+            data.append(round(places[place].rateOverInterval(day, 7), 2))
+        writer.writerow(data)
+
