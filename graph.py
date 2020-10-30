@@ -4,6 +4,7 @@ import matplotlib
 from matplotlib import pyplot
 from matplotlib import dates
 import csv
+import sys
 
 class Place:
     def __init__(self, row):
@@ -16,7 +17,7 @@ class Place:
             self.rate.append(float(x))
 
 def plotLocation(ax, dates, places, location):
-    ax.plot_date(dates[160:], places[location].rate[160:], fmt='-', label=places[location].name)
+    ax.plot_date(dates[238:-2], places[location].rate[238:-2], fmt='-', label=places[location].name)
 
 places = {}
 with open('places-7day.csv') as csvfile:
@@ -27,11 +28,16 @@ with open('places-7day.csv') as csvfile:
 
 dates = matplotlib.dates.datestr2num(head[4:])
 
+if len(sys.argv) != 2:
+    print("Syntax: " + sys.argv[0] + " places_file")
+    sys.exit(1)
+
 fig, ax = matplotlib.pyplot.subplots()
-plotLocation(ax, dates, places, 'E06000018')
-plotLocation(ax, dates, places, 'E07000091')
-#ax.plot_date(dates, places['E06000018'].rate, fmt='-')
-#ax.plot_date(dates, places['E07000091'].rate, fmt='-')
+with open(sys.argv[1]) as plotplaces:
+    placeList = plotplaces.readlines()
+    for code in placeList:
+        plotLocation(ax, dates, places, code.strip())
+
 ax.legend()
 ax.grid(True)
 fig.autofmt_xdate()
