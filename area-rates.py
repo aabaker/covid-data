@@ -84,8 +84,7 @@ england = places['E92000001']
 
 while england.cases[refday-1] > (england.cases[refday] * 4):
     refday = refday - 1
-print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = refday)))
-refday = refday + 1
+print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = (refday - 1))))
 
 print('Rates in defined places')
 with open ('myplaces.txt') as myplaces:
@@ -108,7 +107,7 @@ for place in sortedPlaces[:15]:
 header = [ 'Code', 'Name', 'Population' ]
 for day in range(0, refday):
     header.append(jan1+datetime.timedelta(days = day))
-with open('places-raw.csv', mode='w') as csvfile:
+with open(newest.strftime('%Y%m%d') + '-places-raw.csv', mode='w') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(header)
     for place in places:
