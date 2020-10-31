@@ -23,11 +23,14 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import requests
-import csv
 import codecs
+import configparser
 from contextlib import closing
+import csv
 import datetime
+import os
+import requests
+import sys
 
 url = 'https://coronavirus.data.gov.uk/downloads/csv/coronavirus-cases_latest.csv'
 
@@ -44,7 +47,7 @@ class Place:
     def totalCases(self):
         return sum(self.cases)
     def rateOverInterval(self, end, days):
-        return sum(self.cases[end - days:end]) / self.population * 100000
+        return sum(self.cases[end - days + 1:end + 1]) / self.population * 100000
     def format(self, day):
         result = self.name
         result += ', This Week: '
@@ -57,8 +60,15 @@ class Place:
         result += f'{self.population:.0f}'
         return result
 
+if len(sys.argv) != 2:
+    print("Syntax: " + sys.argv[0] + " config_file")
+    sys.exit(1)
+
+config = configparser.ConfigParser()
+config.read(sys.argv[1])
+
 places = {}
-with open('population.csv') as csvfile:
+with open(os.path.join(config['DEFAULT']['DataDir'],'population.csv')) as csvfile:
     reader = csv.reader(csvfile)
     next(reader) # skip header
     for row in reader:
@@ -84,18 +94,19 @@ england = places['E92000001']
 
 while england.cases[refday-1] > (england.cases[refday] * 4):
     refday = refday - 1
-print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = (refday - 1))))
+# Subtract an extra day as currently we are seeing one data of very low data, one day with a
+# huge error before that then errors of usually <10% after that
+refday = refday - 1
+print('Reference date: ' + str(datetime.date(2020, 1, 1) + datetime.timedelta(days = refday)))
 
 print('Rates in defined places')
-with open ('myplaces.txt') as myplaces:
-    placeList = myplaces.readlines()
-    for code in placeList:
+for code in config['DEFAULT']['Places'].splitlines():
+    if code != '':
         try:
-            place = places[code.strip()]
+            place = places[code]
             print(place.format(refday))
         except KeyError:
             print('Unrecognised place code: ' + code)
-
 
 print('')
 print('15 highest rates over the past week')
@@ -105,9 +116,9 @@ for place in sortedPlaces[:15]:
     print(places[place].format(refday))
 
 header = [ 'Code', 'Name', 'Population' ]
-for day in range(0, refday):
+for day in range(0, (newest - jan1).days + 1):
     header.append(jan1+datetime.timedelta(days = day))
-with open(newest.strftime('%Y%m%d') + '-places-raw.csv', mode='w') as csvfile:
+with open(os.path.join(config['DEFAULT']['DataDir'], newest.strftime('%Y%m%d') + '-places-raw.csv'), mode='w') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(header)
     for place in places:
@@ -125,9 +136,10 @@ placeTypes = {
         'E92': 'Nation'
         } 
 header = [ 'Code', 'Name', 'Population', 'Type' ]
-for day in range(6, refday):
+# Day jan1 + 6 (i.e. 7th Jan is the first day with 7 days of data to average)
+for day in range(6, refday + 1):
     header.append(jan1+datetime.timedelta(days = day))
-with open('places-7day.csv', mode='w') as csvfile:
+with open(os.path.join(config['DEFAULT']['DataDir'], 'places-7day.csv'), mode='w') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(header)
     for place in places:
@@ -136,7 +148,7 @@ with open('places-7day.csv', mode='w') as csvfile:
         except KeyError:
             ptype = 'Unknown'
         data = [ places[place].code, places[place].name, places[place].population, ptype ]
-        for day in range(7, refday + 1):
+        for day in range(6, refday + 1):
             data.append(round(places[place].rateOverInterval(day, 7), 2))
         writer.writerow(data)
 
