@@ -32,7 +32,9 @@ import os
 import requests
 import sys
 
-url = 'https://coronavirus.data.gov.uk/downloads/csv/coronavirus-cases_latest.csv'
+baseurl = 'https://api.coronavirus.data.gov.uk/v2/data?'
+metric = '&metric=newCasesBySpecimenDate&format=csv'
+areaTypes = [ 'nation', 'region', 'utla', 'ltla' ]
 
 class Place:
     def __init__(self, code, name, population):
@@ -76,17 +78,20 @@ with open(os.path.join(config['DEFAULT']['DataDir'],'population.csv')) as csvfil
 
 jan1 = datetime.date(2020, 1, 1)
 newest = jan1
-with closing(requests.get(url, stream=True)) as r:
-    reader = csv.reader(codecs.iterdecode(r.iter_lines(), 'utf-8'))
-    next(reader) # skip header
-    for row in reader:
-        row_date = datetime.datetime.strptime(row[3], '%Y-%m-%d').date()
-        if row_date > newest:
-            newest = row_date
-        if row[1] in places:
-            places[row[1]].addCases((row_date-jan1).days, int(row[4]))
-        else:
-            print('Unknown place' + row[1] + ' (' + row[0] + ')')
+for area in areaTypes:
+    with closing(requests.get(baseurl + 'areaType=' + area + metric, stream=True)) as r:
+        reader = csv.reader(codecs.iterdecode(r.iter_lines(), 'utf-8'))
+        next(reader) # skip header
+        for row in reader:
+            row_date = datetime.datetime.strptime(row[3], '%Y-%m-%d').date()
+            if row_date > newest:
+                newest = row_date
+            if row[0] in places:
+                places[row[0]].addCases((row_date-jan1).days, int(row[4]))
+            else:
+                # We currently only have population data for England
+                if row[0][0] == 'E':
+                    print('Unknown place ' + row[0] + ' (' + row[1] + ')')
 
 
 refday=(newest - jan1).days

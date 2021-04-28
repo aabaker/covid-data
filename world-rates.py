@@ -8,11 +8,12 @@ import requests
 
 url = 'https://covid.ourworldindata.org/data/owid-covid-data.csv'
 
+cont_col = 1
 name_col = 2
 date_col = 3
 newc_col = 5
 vacc_col = 34
-popn_col = 40
+popn_col = 44
 
 jan1 = datetime.date(2020, 1, 1)
 
@@ -57,7 +58,7 @@ with closing(requests.get(url, stream=True)) as r:
   head = next(reader) # skip header
   for row in reader:
     country = row[name_col]
-    if country == "International":
+    if row[cont_col] == "":
       continue
     if not country in countries:
       try:
